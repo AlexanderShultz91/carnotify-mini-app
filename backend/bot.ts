@@ -14,13 +14,20 @@ export const bot = token ? new Bot(token) : null;
 if (bot) {
   bot.command('start', (ctx) => {
     const keyboard = new InlineKeyboard()
-      .url('Открыть приложение', 'https://t.me/parkathome_bot/app')
+      .text('Открыть приложение', 'open_app')
       .danger();
 
     return ctx.reply(
       'Привет, это Парковщик. Жми открыть приложение ниже',
       { reply_markup: keyboard }
     );
+  });
+
+  // Обработка «красной кнопки» (редирект в приложение)
+  bot.callbackQuery('open_app', async (ctx) => {
+    await ctx.answerCallbackQuery({
+      url: 'https://t.me/parkathome_bot/app'
+    });
   });
 
   // Гасим все необработанные апдейты молча
