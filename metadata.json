@@ -1,0 +1,5 @@
+{
+  "name": "CarNotify Mini App",
+  "description": "Telegram Mini App for car owner notifications and parking assistance.",
+  "requestFramePermissions": []
+}

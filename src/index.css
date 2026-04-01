@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+:root {
+  --tg-theme-bg-color: #ffffff;
+  --tg-theme-text-color: #000000;
+  --tg-theme-hint-color: #999999;
+  --tg-theme-link-color: #2481cc;
+  --tg-theme-button-color: #2481cc;
+  --tg-theme-button-text-color: #ffffff;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #0D0D0D;
+  color: #ffffff;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Telegram Mini App specific styles */
+.tg-container {
+  max-width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+input:focus {
+  outline: none;
+}
+
+/* Custom animations */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.2; transform: scale(0.95); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3.5s ease-in-out infinite;
+}
