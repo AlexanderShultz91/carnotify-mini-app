@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import apiRoutes from "./backend/routes.js";
@@ -7,6 +8,17 @@ import { bot } from "./backend/bot.js";
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+  app.use(cors({
+    origin: [
+      'https://parking-v4-final.vercel.app',
+      'https://web.telegram.org',
+      'http://localhost:5173'
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  }));
+  app.options('*', cors());
 
   app.use(express.json());
   app.use("/api", apiRoutes);
