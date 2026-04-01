@@ -27,6 +27,7 @@ import { MorphingContainer } from './components/MorphingContainer';
 type Screen = 'welcome' | 'selection' | 'i-blocked' | 'cant-leave' | 'success' | 'report';
 
 const tg = (window as any).Telegram?.WebApp;
+const API_BASE = import.meta.env.VITE_API_URL || 'https://carnotify-mini-app-production.up.railway.app';
 
 export const haptic = {
   impact: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'light') => {
@@ -486,11 +487,11 @@ export default function App() {
     const performSilentLogin = async () => {
       try {
         // 1. Check if user exists
-        const response = await fetch(`/api/user/${user.id}`);
+        const response = await fetch(`${API_BASE}/api/user/${user.id}`);
         
         if (response.status === 404) {
           // 2. Register if not found
-          const registerResponse = await fetch('/api/register', {
+          const registerResponse = await fetch(`${API_BASE}/api/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -530,7 +531,7 @@ export default function App() {
     const user = tg?.initDataUnsafe?.user;
     if (user?.id) {
       try {
-        await fetch('/api/register', {
+        await fetch(`${API_BASE}/api/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -664,7 +665,7 @@ export default function App() {
     const user = tg?.initDataUnsafe?.user;
     if (user?.id) {
       try {
-        const response = await fetch('/api/notify', {
+        const response = await fetch(`${API_BASE}/api/notify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1266,7 +1267,7 @@ export default function App() {
             const user = tg?.initDataUnsafe?.user;
             if (user?.id) {
               try {
-                await fetch('/api/register', {
+                await fetch(`${API_BASE}/api/register`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
