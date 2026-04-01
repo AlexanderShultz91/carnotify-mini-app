@@ -13,9 +13,9 @@ export const bot = token ? new Bot(token) : null;
 
 if (bot) {
   bot.command("start", (ctx) => {
-    const keyboard = new InlineKeyboard().url(
-      "Открыть приложение",
-      "https://t.me/parkathome_bot/app"
+    const keyboard = new InlineKeyboard().webApp(
+      "🔴 Открыть приложение",
+      "https://parking-v4-final.vercel.app"
     );
 
     return ctx.reply(
