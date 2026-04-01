@@ -13,11 +13,9 @@ export const bot = token ? new Bot(token) : null;
 
 if (bot) {
   bot.command('start', (ctx) => {
-    const keyboard = new InlineKeyboard().url(
-      'Открыть приложение',
-      'https://t.me/parkathome_bot/app',
-      { style: 'danger' }
-    );
+    const keyboard = new InlineKeyboard()
+      .url('Открыть приложение', 'https://t.me/parkathome_bot/app')
+      .danger();
 
     return ctx.reply(
       'Привет, это Парковщик. Жми открыть приложение ниже',
