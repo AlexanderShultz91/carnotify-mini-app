@@ -1,4 +1,4 @@
-import { Bot } from "grammy";
+import { Bot, InlineKeyboard } from "grammy";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -10,3 +10,17 @@ if (!token) {
 }
 
 export const bot = token ? new Bot(token) : null;
+
+if (bot) {
+  bot.command("start", (ctx) => {
+    const keyboard = new InlineKeyboard().webApp(
+      "Открыть приложение",
+      process.env.MINI_APP_URL || "https://parking-v4-final.vercel.app"
+    );
+
+    return ctx.reply(
+      "Парковка у дома\n\nПерекрыли вас или вы кого-то — напишите владельцу напрямую\nУкажите, когда планируете уехать, чтобы сосед не ждал\n\nСвязь с соседями без лишних слов",
+      { reply_markup: keyboard }
+    );
+  });
+}
