@@ -15,11 +15,12 @@ if (bot) {
   bot.command('start', (ctx) => {
     const keyboard = new InlineKeyboard().url(
       'Открыть приложение',
-      'https://t.me/parkathome_bot/app'
+      'https://t.me/parkathome_bot/app',
+      { style: 'danger' }
     );
 
     return ctx.reply(
-      'Парковка у дома\nПерекрыли вас или вы кого-то - напишите владельцу напрямую\nСвязь с соседями без лишних слов',
+      'Привет, это Парковщик. Жми открыть приложение ниже',
       { reply_markup: keyboard }
     );
   });
