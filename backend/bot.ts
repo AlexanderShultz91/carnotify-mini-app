@@ -13,13 +13,13 @@ export const bot = token ? new Bot(token) : null;
 
 if (bot) {
   bot.command("start", (ctx) => {
-    const keyboard = new InlineKeyboard().webApp(
+    const keyboard = new InlineKeyboard().url(
       "Открыть приложение",
-      process.env.MINI_APP_URL || "https://parking-v4-final.vercel.app"
+      "https://t.me/parkathome_bot/app"
     );
 
     return ctx.reply(
-      "Парковка у дома\n\nПерекрыли вас или вы кого-то — напишите владельцу напрямую\nУкажите, когда планируете уехать, чтобы сосед не ждал\n\nСвязь с соседями без лишних слов",
+      "Привет, это Парковщик.\nСвязь с соседями без лишних слов",
       { reply_markup: keyboard }
     );
   });
