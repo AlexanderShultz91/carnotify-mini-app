@@ -1,27 +1,31 @@
-import { Bot, InlineKeyboard } from "grammy";
-import dotenv from "dotenv";
+import { Bot, InlineKeyboard } from 'grammy';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 
 if (!token) {
-  console.warn("TELEGRAM_BOT_TOKEN is not set. Bot functionality will be disabled.");
+  console.warn('TELEGRAM_BOT_TOKEN is not set. Bot will be disabled.');
 }
 
 export const bot = token ? new Bot(token) : null;
 
 if (bot) {
-  bot.command("start", (ctx) => {
-    const keyboard = new InlineKeyboard().add({
-      text: "Открыть приложение",
-      url: "https://t.me/parkathome_bot/app",
-      style: "danger"
-    });
+  bot.command('start', (ctx) => {
+    const keyboard = new InlineKeyboard().webApp(
+      'Открыть приложение',
+      process.env.MINI_APP_URL || 'https://t.me/parkathome_bot/app'
+    );
 
     return ctx.reply(
-      "Привет, это Парковщик.\nСвязь с соседями без лишних слов",
+      'Парковка у дома\nПерекрыли вас или вы кого-то - напишите владельцу напрямую\nСвязь с соседями без лишних слов',
       { reply_markup: keyboard }
     );
+  });
+
+  // Гасим все необработанные апдейты молча
+  bot.catch((err) => {
+    console.error('Bot error:', err.message);
   });
 }
