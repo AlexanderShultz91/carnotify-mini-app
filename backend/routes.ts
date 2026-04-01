@@ -214,6 +214,7 @@ router.post('/register', (req: Request, res: Response) => {
  *   report      - жалоба, бот НЕ вызывается, пишем только в reports
  */
 router.post('/notify', async (req: Request, res: Response) => {
+  console.log('notify called', req.body);
   const { type, target_car_number, reason, description } = req.body;
 
   // --- Авторизация ---

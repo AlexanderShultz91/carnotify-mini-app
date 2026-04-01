@@ -663,6 +663,14 @@ export default function App() {
 
     // Send request to backend
     const user = tg?.initDataUnsafe?.user;
+    
+    console.log('--- handleNotify DEBUG ---');
+    console.log('user:', user);
+    console.log('finalType:', finalType);
+    console.log('blockedCarNumbers:', blockedCarNumbers);
+    console.log('target_car_number:', (finalType === 'blocked' || finalType === 'cant_leave' || finalType === 'warn') ? blockedCarNumbers[0] : null);
+    console.log('API_BASE:', API_BASE);
+    
     if (user?.id) {
       try {
         const response = await fetch(`${API_BASE}/api/notify`, {
