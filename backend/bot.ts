@@ -13,10 +13,11 @@ export const bot = token ? new Bot(token) : null;
 
 if (bot) {
   bot.command("start", (ctx) => {
-    const keyboard = new InlineKeyboard().webApp(
-      "Открыть приложение",
-      "https://parking-v4-final.vercel.app"
-    );
+    const keyboard = new InlineKeyboard().add({
+      text: "Открыть приложение",
+      web_app: { url: "https://parking-v4-final.vercel.app" },
+      style: "destructive"
+    });
 
     return ctx.reply(
       "Привет, это Парковщик.\nСвязь с соседями без лишних слов",
