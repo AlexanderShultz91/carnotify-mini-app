@@ -13,9 +13,9 @@ export const bot = token ? new Bot(token) : null;
 
 if (bot) {
   bot.command('start', (ctx) => {
-    const keyboard = new InlineKeyboard().webApp(
+    const keyboard = new InlineKeyboard().url(
       'Открыть приложение',
-      process.env.MINI_APP_URL || 'https://t.me/parkathome_bot/app'
+      'https://t.me/parkathome_bot/app'
     );
 
     return ctx.reply(
