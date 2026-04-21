@@ -14,20 +14,13 @@ export const bot = token ? new Bot(token) : null;
 if (bot) {
   bot.command('start', (ctx) => {
     const keyboard = new InlineKeyboard()
-      .text('Открыть приложение', 'open_app')
+      .url('Открыть приложение', 'https://parking-v4-final.vercel.app')
       .danger();
 
     return ctx.reply(
       'Привет, это Парковщик. Жми открыть приложение ниже',
       { reply_markup: keyboard }
     );
-  });
-
-  // Обработка «красной кнопки» (редирект в приложение)
-  bot.callbackQuery('open_app', async (ctx) => {
-    await ctx.answerCallbackQuery({
-      url: 'https://parking-v4-final.vercel.app/'
-    });
   });
 
   // Гасим все необработанные апдейты молча
