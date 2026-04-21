@@ -466,6 +466,7 @@ export default function App() {
   const [isShake, setIsShake] = useState(false);
   const [isShine, setIsShine] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
 
   useEffect(() => {
     if (tg) {
@@ -679,20 +680,21 @@ export default function App() {
     console.log('API_BASE:', API_BASE);
     
     try {
+      const formData = new FormData();
+      if (user?.id) formData.append('telegram_id', String(user.id));
+      formData.append('type', finalType);
+      const targetCar = (finalType === 'blocked' || finalType === 'cant_leave' || finalType === 'warn') ? blockedCarNumbers[0] : null;
+      if (targetCar) formData.append('target_car_number', targetCar);
+      if (finalReason) formData.append('reason', finalReason);
+      if ((finalType === 'warn' || finalType === 'report') && description) formData.append('description', description);
+      if (selectedPhoto) formData.append('photo', selectedPhoto);
+
       const response = await fetch(`${API_BASE}/api/notify`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
+        headers: {
           'x-telegram-init-data': tg?.initData || ''
         },
-        body: JSON.stringify({
-          telegram_id: user?.id || null,
-          type: finalType,
-          target_car_number: (finalType === 'blocked' || finalType === 'cant_leave' || finalType === 'warn') ? blockedCarNumbers[0] : null,
-          reason: finalReason,
-          description: (finalType === 'warn' || finalType === 'report') ? description : null,
-          photo: null
-        })
+        body: formData
       });
 
       const data = await response.json();
@@ -707,6 +709,7 @@ export default function App() {
         setSelectedReportReasons([]);
         setDescription('');
         setBlockedCarNumbers(['']);
+        setSelectedPhoto(null);
       } else {
         console.error('Notify error:', data.error);
         setIsShake(true);
@@ -1329,8 +1332,8 @@ export default function App() {
         ref={fileInputRef}
         onChange={(e) => {
           if (e.target.files && e.target.files.length > 0) {
+            setSelectedPhoto(e.target.files[0]);
             haptic.notification('success');
-            // Here you would handle the actual file upload
           }
         }}
       />

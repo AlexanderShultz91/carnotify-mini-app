@@ -2,6 +2,10 @@ import { Router, Request, Response } from 'express';
 import { createHmac } from 'crypto';
 import client from './database.js';
 import { bot } from './bot.js';
+import multer from 'multer';
+import { InputFile } from 'grammy';
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -219,7 +223,7 @@ router.post('/register', async (req: Request, res: Response) => {
  *   warn        - предупреждение, свободный текст (reason + description)
  *   report      - жалоба, бот НЕ вызывается, пишем только в reports
  */
-router.post('/notify', async (req: Request, res: Response) => {
+router.post('/notify', upload.single('photo'), async (req: Request, res: Response) => {
   console.log('notify called', req.body);
   const { type, target_car_number, reason, description } = req.body;
 
@@ -293,7 +297,11 @@ router.post('/notify', async (req: Request, res: Response) => {
 
   if (ownerRow && bot) {
     try {
-      await bot.api.sendMessage(ownerRow.owner_telegram_id, messageText);
+      if (req.file) {
+        await bot.api.sendPhoto(ownerRow.owner_telegram_id, new InputFile(req.file.buffer, req.file.originalname), { caption: messageText });
+      } else {
+        await bot.api.sendMessage(ownerRow.owner_telegram_id, messageText);
+      }
 
       // Помечаем как доставленное
       await client.execute({ sql: 'UPDATE notifications SET delivered = 1 WHERE id = ?', args: [notifId] });
