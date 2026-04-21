@@ -671,44 +671,54 @@ export default function App() {
     console.log('target_car_number:', (finalType === 'blocked' || finalType === 'cant_leave' || finalType === 'warn') ? blockedCarNumbers[0] : null);
     console.log('API_BASE:', API_BASE);
     
-    if (user?.id) {
-      try {
-        const response = await fetch(`${API_BASE}/api/notify`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-telegram-init-data': tg?.initData || ''
-          },
-          body: JSON.stringify({
-            telegram_id: user.id,
-            type: finalType,
-            target_car_number: (finalType === 'blocked' || finalType === 'cant_leave' || finalType === 'warn') ? blockedCarNumbers[0] : null,
-            reason: finalReason,
-            description: (finalType === 'warn' || finalType === 'report') ? description : null,
-            photo: null // Placeholder for photo handling
-          })
-        });
+    try {
+      const response = await fetch(`${API_BASE}/api/notify`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-telegram-init-data': tg?.initData || ''
+        },
+        body: JSON.stringify({
+          telegram_id: user?.id || null,
+          type: finalType,
+          target_car_number: (finalType === 'blocked' || finalType === 'cant_leave' || finalType === 'warn') ? blockedCarNumbers[0] : null,
+          reason: finalReason,
+          description: (finalType === 'warn' || finalType === 'report') ? description : null,
+          photo: null
+        })
+      });
 
-        const data = await response.json();
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsDelivered(data.delivered || false);
+        haptic.notification('success');
+        setCurrentScreen('success');
         
-        if (data.success) {
-          setIsDelivered(data.delivered || false);
-          haptic.notification('success');
-          setCurrentScreen('success');
-          
-          // Clear state after success
-          setSelectedReasons([]);
-          setSelectedReportReasons([]);
-          setDescription('');
-          setBlockedCarNumbers(['']);
-        } else {
-          console.error('Notify error:', data.error);
-          haptic.notification('error');
-        }
-      } catch (error) {
-        console.error('Error sending notification:', error);
+        // Clear state after success
+        setSelectedReasons([]);
+        setSelectedReportReasons([]);
+        setDescription('');
+        setBlockedCarNumbers(['']);
+      } else {
+        console.error('Notify error:', data.error);
+        setIsShake(true);
+        setErrorMessage(data.error || 'Ошибка отправки');
         haptic.notification('error');
+        setTimeout(() => {
+          setIsShake(false);
+          setErrorMessage('');
+        }, 3000);
       }
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      setIsShake(true);
+      setErrorMessage('Нет связи с сервером');
+      haptic.notification('error');
+      setTimeout(() => {
+        setIsShake(false);
+        setErrorMessage('');
+      }, 3000);
     }
   };
 

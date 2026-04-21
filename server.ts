@@ -16,7 +16,7 @@ async function startServer() {
       'http://localhost:5173'
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-telegram-init-data'],
     credentials: true
   }));
   app.options('*', cors());

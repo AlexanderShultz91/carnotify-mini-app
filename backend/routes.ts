@@ -61,22 +61,24 @@ function isRateLimited(key: string, maxRequests = 5, windowMs = 5 * 60 * 1000): 
   return false; // не заблокирован
 }
 
-/**
- * Получить авторизованный telegram_id из запроса.
- * Приоритет: валидированный initData → body.telegram_id (только в dev).
- */
 function getAuthorizedId(req: Request): number | null {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const initData = req.headers['x-telegram-init-data'] as string | undefined;
 
+  let authorizedId: number | null = null;
+
   // Продакшн: строгая валидация initData
   if (botToken && initData) {
-    return validateInitData(initData, botToken);
+    authorizedId = validateInitData(initData, botToken);
   }
 
-  // Dev без токена: доверяем body (только для локальной разработки)
-  if (process.env.NODE_ENV !== 'production' && req.body?.telegram_id) {
-    console.warn('[DEV] Using telegram_id from body — never in production!');
+  if (authorizedId) {
+    return authorizedId;
+  }
+
+  // Fallback to body for testing outside Telegram (including production testing)
+  if (req.body?.telegram_id) {
+    console.warn('[WARNING] Using telegram_id from body. Ensure you secure this in a real production environment!');
     return Number(req.body.telegram_id);
   }
 
@@ -325,6 +327,38 @@ router.get('/admin/stats', async (req: Request, res: Response) => {
   `)).rows;
 
   return res.json({ users, cars, notifications, reports, recent });
+});
+
+/**
+ * GET /api/admin/data
+ * Возвращает полные данные для админки.
+ */
+router.get('/admin/data', async (req: Request, res: Response) => {
+  const usersWithCars = (await client.execute(`
+    SELECT u.telegram_id, u.first_name, u.last_name, u.created_at, c.car_number
+    FROM users u
+    LEFT JOIN cars c ON c.owner_telegram_id = u.telegram_id
+    ORDER BY u.created_at DESC
+  `)).rows;
+
+  const notifications = (await client.execute(`
+    SELECT n.id, n.type, n.target_car_number, n.reason, n.description, n.delivered, n.created_at,
+           u.first_name as sender_name, c_sender.car_number as sender_car
+    FROM notifications n
+    LEFT JOIN users u ON u.telegram_id = n.sender_id
+    LEFT JOIN cars c_sender ON c_sender.owner_telegram_id = n.sender_id
+    ORDER BY n.created_at DESC
+  `)).rows;
+
+  const reports = (await client.execute(`
+    SELECT r.id, r.target_car_number, r.reason, r.description, r.created_at,
+           u.first_name as sender_name
+    FROM reports r
+    LEFT JOIN users u ON u.telegram_id = r.sender_id
+    ORDER BY r.created_at DESC
+  `)).rows;
+
+  return res.json({ users: usersWithCars, notifications, reports });
 });
 
 export default router;
