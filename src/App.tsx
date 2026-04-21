@@ -467,13 +467,6 @@ export default function App() {
   const [isShine, setIsShine] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   
-  useEffect(() => {
-    if (tg) {
-      tg.ready();
-      tg.expand();
-    }
-  }, []);
-
   const [cars, setCars] = useState<string[]>(() => {
     const savedCars = localStorage.getItem('cars');
     if (savedCars) return JSON.parse(savedCars);

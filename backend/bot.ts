@@ -25,9 +25,8 @@ if (bot) {
 
   // Обработка «красной кнопки» (редирект в приложение)
   bot.callbackQuery('open_app', async (ctx) => {
-    const appUrl = process.env.MINI_APP_URL || process.env.APP_URL || 'https://parking-v4-final.vercel.app';
     await ctx.answerCallbackQuery({
-      url: appUrl
+      url: 'https://parking-v4-final.vercel.app/'
     });
   });
 
