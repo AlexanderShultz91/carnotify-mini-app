@@ -287,6 +287,10 @@ router.post('/notify', async (req: Request, res: Response) => {
   const notifId = Number(insertNotifRes.lastInsertRowid);
 
   // --- Отправка через бота ---
+  if (!ownerRow && type !== 'report') {
+    return res.status(404).json({ success: false, error: 'Автомобиль не зарегистрирован' });
+  }
+
   if (ownerRow && bot) {
     try {
       await bot.api.sendMessage(ownerRow.owner_telegram_id, messageText);
@@ -299,11 +303,11 @@ router.post('/notify', async (req: Request, res: Response) => {
       // 403 = пользователь заблокировал бота - не роняем сервер
       const code = (botError as { error_code?: number })?.error_code;
       console.warn(`Bot send failed (code ${code}) for owner ${ownerRow.owner_telegram_id}`);
+      return res.status(400).json({ success: false, error: 'Не удалось доставить сообщение' });
     }
   }
 
-  // Получатель не найден или бот не смог — всё равно возвращаем успех фронту
-  return res.json({ success: true, delivered: false });
+  return res.status(500).json({ success: false, error: 'Ошибка сервера' });
 });
 
 /**

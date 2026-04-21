@@ -703,20 +703,24 @@ export default function App() {
       } else {
         console.error('Notify error:', data.error);
         setIsShake(true);
+        setIsShine(true);
         setErrorMessage(data.error || 'Ошибка отправки');
         haptic.notification('error');
         setTimeout(() => {
           setIsShake(false);
+          setIsShine(false);
           setErrorMessage('');
         }, 3000);
       }
     } catch (error) {
       console.error('Error sending notification:', error);
       setIsShake(true);
+      setIsShine(true);
       setErrorMessage('Нет связи с сервером');
       haptic.notification('error');
       setTimeout(() => {
         setIsShake(false);
+        setIsShine(false);
         setErrorMessage('');
       }, 3000);
     }
