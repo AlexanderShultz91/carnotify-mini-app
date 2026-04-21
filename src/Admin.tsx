@@ -263,7 +263,7 @@ export default function Admin() {
                   <div className="bg-black/30 p-4 rounded-xl border border-white/5 text-left">
                     <p className="text-xs text-emerald-400 mb-1 font-mono">Сообщение ботом:</p>
                     <p className="text-sm text-gray-300 italic whitespace-pre-wrap">
-                      🚗 Парковочный ассистент{"\n\n"}
+                      Парковочный ассистент{"\n\n"}
                       Ваш автомобиль мешает выезду соседу. Пожалуйста, подойдите к машине.
                     </p>
                   </div>
@@ -281,7 +281,7 @@ export default function Admin() {
                   <div className="bg-black/30 p-4 rounded-xl border border-white/5 text-left">
                     <p className="text-xs text-emerald-400 mb-1 font-mono">Сообщение ботом:</p>
                     <p className="text-sm text-gray-300 italic whitespace-pre-wrap">
-                      🚗 Парковочный ассистент{"\n\n"}
+                      Парковочный ассистент{"\n\n"}
                       Вашу машину перекрыл сосед (госномер: [Номер отправителя]).{"\n"}
                       Он уедет, как только вы с ним свяжетесь или подадите сигнал.
                     </p>
@@ -300,7 +300,7 @@ export default function Admin() {
                   <div className="bg-black/30 p-4 rounded-xl border border-white/5 text-left">
                     <p className="text-xs text-emerald-400 mb-1 font-mono">Сообщение ботом:</p>
                     <p className="text-sm text-gray-300 italic whitespace-pre-wrap">
-                      ⚠️ Сообщение о вашем автомобиле{"\n\n"}
+                      Сообщение о вашем автомобиле{"\n\n"}
                       [Выбранные причины + Описание]
                     </p>
                   </div>
