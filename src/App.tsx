@@ -675,7 +675,10 @@ export default function App() {
       try {
         const response = await fetch(`${API_BASE}/api/notify`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-telegram-init-data': tg?.initData || ''
+          },
           body: JSON.stringify({
             telegram_id: user.id,
             type: finalType,
