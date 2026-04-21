@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import apiRoutes from "./backend/routes.js";
 import { bot } from "./backend/bot.js";
+import { initDb } from "./backend/database.js";
 
 async function startServer() {
   const app = express();
@@ -36,6 +37,8 @@ async function startServer() {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+
+  await initDb();
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);

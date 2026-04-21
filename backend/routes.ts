@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { createHmac } from 'crypto';
-import db from './database.js';
+import client from './database.js';
 import { bot } from './bot.js';
 
 const router = Router();
@@ -125,19 +125,17 @@ function buildMessage(
  * GET /api/user/:telegramId
  * Проверяет наличие пользователя, возвращает профиль + машину если есть.
  */
-router.get('/user/:telegramId', (req: Request, res: Response) => {
+router.get('/user/:telegramId', async (req: Request, res: Response) => {
   const telegramId = Number(req.params.telegramId);
   if (!telegramId) return res.status(400).json({ error: 'Invalid telegramId' });
 
-  const user = db
-    .prepare('SELECT * FROM users WHERE telegram_id = ?')
-    .get(telegramId) as Record<string, unknown> | undefined;
+  const userRes = await client.execute({ sql: 'SELECT * FROM users WHERE telegram_id = ?', args: [telegramId] });
+  const user = userRes.rows[0] as Record<string, unknown> | undefined;
 
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  const car = db
-    .prepare('SELECT car_number FROM cars WHERE owner_telegram_id = ?')
-    .get(telegramId) as { car_number: string } | undefined;
+  const carRes = await client.execute({ sql: 'SELECT car_number FROM cars WHERE owner_telegram_id = ?', args: [telegramId] });
+  const car = carRes.rows[0] as { car_number: string } | undefined;
 
   return res.json({ ...user, car_number: car?.car_number || null });
 });
@@ -148,7 +146,7 @@ router.get('/user/:telegramId', (req: Request, res: Response) => {
  * Если передан car_number - привязывает к аккаунту (один пользователь = один номер).
  * Использует initData из заголовка для авторизации, если токен задан.
  */
-router.post('/register', (req: Request, res: Response) => {
+router.post('/register', async (req: Request, res: Response) => {
   const { first_name, last_name, car_number } = req.body;
 
   // Для регистрации принимаем telegram_id из body (еще нет initData при первом запуске)
@@ -159,39 +157,45 @@ router.post('/register', (req: Request, res: Response) => {
   }
 
   try {
-    const txn = db.transaction(() => {
-      // Upsert пользователя
-      db.prepare(`
-        INSERT INTO users (telegram_id, first_name, last_name)
-        VALUES (?, ?, ?)
-        ON CONFLICT(telegram_id) DO UPDATE SET
-          first_name = COALESCE(excluded.first_name, users.first_name),
-          last_name  = COALESCE(excluded.last_name,  users.last_name)
-      `).run(telegram_id, first_name || null, last_name || null);
+    await client.execute('BEGIN');
+    try {
+      await client.execute({
+        sql: `
+          INSERT INTO users (telegram_id, first_name, last_name)
+          VALUES (?, ?, ?)
+          ON CONFLICT(telegram_id) DO UPDATE SET
+            first_name = COALESCE(excluded.first_name, users.first_name),
+            last_name  = COALESCE(excluded.last_name,  users.last_name)
+        `,
+        args: [telegram_id, first_name || null, last_name || null]
+      });
 
       if (car_number) {
         const normalized = String(car_number).toUpperCase().trim();
 
         // Снимаем старые машины этого пользователя (меняет номер)
-        db.prepare('DELETE FROM cars WHERE owner_telegram_id = ?').run(telegram_id);
+        await client.execute({ sql: 'DELETE FROM cars WHERE owner_telegram_id = ?', args: [telegram_id] });
 
         // Регистрируем новый номер. Если кто-то другой уже зарегал этот номер —
         // переписываем на нового владельца (REPLACE).
-        db.prepare(`
-          INSERT OR REPLACE INTO cars (car_number, owner_telegram_id)
-          VALUES (?, ?)
-        `).run(normalized, telegram_id);
+        await client.execute({
+          sql: `
+            INSERT OR REPLACE INTO cars (car_number, owner_telegram_id)
+            VALUES (?, ?)
+          `,
+          args: [normalized, telegram_id]
+        });
       }
-    });
+      await client.execute('COMMIT');
+    } catch (e) {
+      await client.execute('ROLLBACK');
+      throw e;
+    }
 
-    txn();
-
-    const user = db
-      .prepare('SELECT * FROM users WHERE telegram_id = ?')
-      .get(telegram_id) as Record<string, unknown>;
-    const car = db
-      .prepare('SELECT car_number FROM cars WHERE owner_telegram_id = ?')
-      .get(telegram_id) as { car_number: string } | undefined;
+    const userRes = await client.execute({ sql: 'SELECT * FROM users WHERE telegram_id = ?', args: [telegram_id] });
+    const user = userRes.rows[0];
+    const carRes = await client.execute({ sql: 'SELECT car_number FROM cars WHERE owner_telegram_id = ?', args: [telegram_id] });
+    const car = carRes.rows[0] as { car_number: string } | undefined;
 
     return res.status(201).json({ ...user, car_number: car?.car_number || null });
   } catch (error) {
@@ -230,10 +234,13 @@ router.post('/notify', async (req: Request, res: Response) => {
 
   // --- Тип report: не дёргаем бота, просто пишем в reports ---
   if (type === 'report') {
-    db.prepare(`
-      INSERT INTO reports (sender_id, target_car_number, reason, description)
-      VALUES (?, ?, ?, ?)
-    `).run(senderId, target_car_number || null, reason || null, description || null);
+    await client.execute({
+      sql: `
+        INSERT INTO reports (sender_id, target_car_number, reason, description)
+        VALUES (?, ?, ?, ?)
+      `,
+      args: [senderId, target_car_number || null, reason || null, description || null]
+    });
 
     return res.json({ success: true, delivered: false, note: 'report saved' });
   }
@@ -241,9 +248,8 @@ router.post('/notify', async (req: Request, res: Response) => {
   // --- Для cant_leave и blocked: проверяем что у отправителя есть машина ---
   let senderCarNumber: string | null = null;
   if (type === 'cant_leave' || type === 'blocked') {
-    const senderCar = db
-      .prepare('SELECT car_number FROM cars WHERE owner_telegram_id = ?')
-      .get(senderId) as { car_number: string } | undefined;
+    const senderCarRes = await client.execute({ sql: 'SELECT car_number FROM cars WHERE owner_telegram_id = ?', args: [senderId] });
+    const senderCar = senderCarRes.rows[0] as { car_number: string } | undefined;
 
     if (!senderCar) {
       return res.status(403).json({
@@ -258,22 +264,25 @@ router.post('/notify', async (req: Request, res: Response) => {
     ? String(target_car_number).toUpperCase().trim()
     : null;
 
-  const ownerRow = normalized
-    ? (db
-        .prepare('SELECT owner_telegram_id FROM cars WHERE car_number = ?')
-        .get(normalized) as { owner_telegram_id: number } | undefined)
-    : undefined;
+  let ownerRow: { owner_telegram_id: number } | undefined;
+  if (normalized) {
+    const ownerRes = await client.execute({ sql: 'SELECT owner_telegram_id FROM cars WHERE car_number = ?', args: [normalized] });
+    ownerRow = ownerRes.rows[0] as { owner_telegram_id: number } | undefined;
+  }
 
   // --- Формируем текст ---
   const messageText = buildMessage(type, reason || null, description || null, senderCarNumber);
 
   // --- Лог в notifications ---
-  db.prepare(`
-    INSERT INTO notifications (sender_id, target_car_number, type, reason, description, delivered)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(senderId, normalized || null, type, reason || null, description || null, 0);
+  const insertNotifRes = await client.execute({
+    sql: `
+      INSERT INTO notifications (sender_id, target_car_number, type, reason, description, delivered)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `,
+    args: [senderId, normalized || null, type, reason || null, description || null, 0]
+  });
 
-  const notifId = (db.prepare('SELECT last_insert_rowid() as id').get() as { id: number }).id;
+  const notifId = Number(insertNotifRes.lastInsertRowid);
 
   // --- Отправка через бота ---
   if (ownerRow && bot) {
@@ -281,7 +290,7 @@ router.post('/notify', async (req: Request, res: Response) => {
       await bot.api.sendMessage(ownerRow.owner_telegram_id, messageText);
 
       // Помечаем как доставленное
-      db.prepare('UPDATE notifications SET delivered = 1 WHERE id = ?').run(notifId);
+      await client.execute({ sql: 'UPDATE notifications SET delivered = 1 WHERE id = ?', args: [notifId] });
 
       return res.json({ success: true, delivered: true });
     } catch (botError: unknown) {
@@ -299,23 +308,21 @@ router.post('/notify', async (req: Request, res: Response) => {
  * GET /api/admin/stats  (простая панель для дебага)
  * Возвращает общую статистику по БД.
  */
-router.get('/admin/stats', (req: Request, res: Response) => {
-  const users = (db.prepare('SELECT COUNT(*) as n FROM users').get() as { n: number }).n;
-  const cars = (db.prepare('SELECT COUNT(*) as n FROM cars').get() as { n: number }).n;
-  const notifications = (db.prepare('SELECT COUNT(*) as n FROM notifications').get() as { n: number }).n;
-  const reports = (db.prepare('SELECT COUNT(*) as n FROM reports').get() as { n: number }).n;
+router.get('/admin/stats', async (req: Request, res: Response) => {
+  const users = Number((await client.execute('SELECT COUNT(*) as n FROM users')).rows[0].n);
+  const cars = Number((await client.execute('SELECT COUNT(*) as n FROM cars')).rows[0].n);
+  const notifications = Number((await client.execute('SELECT COUNT(*) as n FROM notifications')).rows[0].n);
+  const reports = Number((await client.execute('SELECT COUNT(*) as n FROM reports')).rows[0].n);
 
-  const recent = db
-    .prepare(`
-      SELECT n.id, n.type, n.target_car_number, n.delivered, n.created_at,
-             u.first_name, c_sender.car_number as sender_car
-      FROM notifications n
-      LEFT JOIN users u ON u.telegram_id = n.sender_id
-      LEFT JOIN cars c_sender ON c_sender.owner_telegram_id = n.sender_id
-      ORDER BY n.created_at DESC
-      LIMIT 20
-    `)
-    .all();
+  const recent = (await client.execute(`
+    SELECT n.id, n.type, n.target_car_number, n.delivered, n.created_at,
+           u.first_name, c_sender.car_number as sender_car
+    FROM notifications n
+    LEFT JOIN users u ON u.telegram_id = n.sender_id
+    LEFT JOIN cars c_sender ON c_sender.owner_telegram_id = n.sender_id
+    ORDER BY n.created_at DESC
+    LIMIT 20
+  `)).rows;
 
   return res.json({ users, cars, notifications, reports, recent });
 });
