@@ -1,9 +1,18 @@
 import { createClient } from '@libsql/client';
 import path from 'path';
+import fs from 'fs';
 
-const dbPath = path.join(process.cwd(), 'database.sqlite');
+let dbPath = path.join(process.cwd(), 'database.sqlite');
 
-const client = createClient({ url: `file:${dbPath}` });
+// Если существует директория /data (например, мы примонтировали Volume в Railway),
+// то сохраняем базу данных туда, чтобы она не удалялась при деплое.
+if (fs.existsSync('/data')) {
+  dbPath = '/data/database.sqlite';
+}
+
+const url = process.env.DATABASE_URL || `file:${dbPath}`;
+
+const client = createClient({ url });
 
 export async function initDb() {
   await client.execute('PRAGMA journal_mode = WAL');
