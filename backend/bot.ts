@@ -15,7 +15,9 @@ if (bot) {
   bot.command('start', (ctx) => {
     const keyboard = new InlineKeyboard()
       .webApp('Открыть приложение', 'https://parking-v4-final.vercel.app/')
-      .danger();
+      .danger()
+      .row()
+      .url('📢 Канал Парковщика', 'https://t.me/homeparking');
 
     return ctx.reply(
       'Привет, это Парковщик. Жми открыть приложение ниже',
