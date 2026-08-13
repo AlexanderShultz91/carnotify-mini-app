@@ -24,7 +24,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CarSideExclamationFill, CarBlocked, TowTruck, Car2Fill, ClockBadgeExclamationFill, Person2Fill } from './SFIcons';
 import { MorphingContainer } from './components/MorphingContainer';
 
-type Screen = 'welcome' | 'selection' | 'i-blocked' | 'cant-leave' | 'success' | 'report';
+type Screen = 'welcome' | 'selection' | 'i-blocked' | 'cant-leave' | 'warn-owner' | 'success' | 'report';
 
 const tg = (window as any).Telegram?.WebApp;
 const API_BASE = import.meta.env.VITE_API_URL || 'https://carnotify-mini-app-production.up.railway.app';
@@ -55,8 +55,6 @@ export const haptic = {
 
 // --- Components ---
 
-// --- Components ---
-
 const TimeSelector = ({ 
   timeInputMode, 
   setTimeInputMode, 
@@ -79,189 +77,163 @@ const TimeSelector = ({
   return (
     <div className="w-full">
       {/* Segmented Control */}
-      <div className={`p-1 rounded-xl flex mb-6 relative border ${
-        isDark ? 'bg-[#1A1A1A] border-gray-800' : 'bg-white/10 border-white/10'
+      <div className={`p-0.5 rounded-[9px] flex mb-6 relative ${
+        isDark ? 'bg-white/5' : 'bg-black/5'
       }`}>
-        {/* Active Background Pill */}
-        <div className="absolute inset-1 flex pointer-events-none">
+        {/* Active Sliding Pill */}
+        <div className="absolute inset-0.5 flex pointer-events-none">
           <motion.div 
-            layoutId={`activeSegment-${theme}`}
-            className={`h-full rounded-lg shadow-sm ${
-              isDark ? 'bg-white/10' : 'bg-white'
-            }`}
-            style={{ 
-              width: 'calc(50% - 2px)',
-              x: timeInputMode === 'interval' ? 0 : '100%'
+            animate={{ 
+              x: timeInputMode === 'interval' ? '0%' : '100%',
             }}
             transition={{ 
               type: 'spring', 
-              stiffness: 400, 
-              damping: 28, 
-              mass: 0.8 
+              stiffness: 800, 
+              damping: 48, 
+              mass: 1 
             }}
+            className={`h-full w-1/2 rounded-[7px] shadow-sm ${
+              isDark ? 'bg-white/10' : 'bg-white'
+            }`}
           />
         </div>
 
         <button 
+          type="button"
           onClick={() => { 
             if (timeInputMode !== 'interval') {
               haptic.selection(); 
               setTimeInputMode('interval'); 
             }
           }}
-          className={`flex-1 py-2 text-[11px] font-medium relative z-10 transition-colors duration-200 ${
+          className={`flex-1 py-1.5 text-[12px] font-medium relative z-10 transition-all active:scale-[0.96] active:opacity-70 ${
             timeInputMode === 'interval' 
-              ? (isDark ? 'text-white' : 'text-black') 
-              : (isDark ? 'text-gray-400' : 'text-white/60')
+              ? (isDark ? 'text-white' : 'text-black font-semibold') 
+              : (isDark ? 'text-white/40' : 'text-black/40')
           }`}
         >
-          Через интервал
+          Интервал
         </button>
         <button 
+          type="button"
           onClick={() => { 
             if (timeInputMode !== 'exact') {
               haptic.selection(); 
               setTimeInputMode('exact'); 
             }
           }}
-          className={`flex-1 py-2 text-[11px] font-medium relative z-10 transition-colors duration-200 ${
+          className={`flex-1 py-1.5 text-[12px] font-medium relative z-10 transition-all active:scale-[0.96] active:opacity-70 ${
             timeInputMode === 'exact' 
-              ? (isDark ? 'text-white' : 'text-black') 
-              : (isDark ? 'text-gray-400' : 'text-white/60')
+              ? (isDark ? 'text-white' : 'text-black font-semibold') 
+              : (isDark ? 'text-white/40' : 'text-black/40')
           }`}
         >
           Точное время
         </button>
       </div>
 
-      <AnimatePresence mode="wait">
-        {timeInputMode === 'interval' ? (
+      <motion.div 
+        layout 
+        transition={{ type: 'spring', stiffness: 800, damping: 48 }}
+        className="relative overflow-hidden"
+      >
+        <AnimatePresence mode="popLayout" custom={timeInputMode === 'exact' ? 1 : -1} initial={false}>
           <motion.div
-            key="interval"
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 10 }}
-            transition={{ duration: 0.2 }}
+            key={timeInputMode}
+            custom={timeInputMode === 'exact' ? 1 : -1}
+            variants={{
+              enter: (direction: number) => ({
+                x: direction * 140,
+                opacity: 0,
+              }),
+              center: {
+                x: 0,
+                opacity: 1,
+              },
+              exit: (direction: number) => ({
+                x: direction * -140,
+                opacity: 0,
+              }),
+            }}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ 
+              type: 'spring', 
+              stiffness: 800, 
+              damping: 48, 
+              mass: 1 
+            }}
+            className="w-full"
           >
-            <div className="mb-5">
-              <p className={`${isDark ? 'text-gray-400' : 'text-white/70'} text-[11px] mb-0.5`}>Уеду через</p>
-              <p className={`${isDark ? 'text-gray-400' : 'text-white/50'} text-[11px]`}>Предупредите соседа, когда уедете</p>
-            </div>
-            
-            <div className="relative h-20 flex flex-col justify-end mb-6 px-3 touch-none">
-              <motion.div 
-                className={`absolute top-0 px-2.5 py-1 font-bold rounded-md mb-1 whitespace-nowrap z-30 pointer-events-none text-[10px] ${
-                  isDark ? 'bg-blue-500 text-white' : 'bg-white text-black'
-                }`}
-                style={{ 
-                  left: `${(leavingIn / 4) * 100}%`,
-                  transform: `translateX(-${(leavingIn / 4) * 100}%)`
-                }}
-                animate={{ 
-                  left: `${(leavingIn / 4) * 100}%`,
-                  transform: `translateX(-${(leavingIn / 4) * 100}%)`,
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{ 
-                  left: { type: "spring", stiffness: 300, damping: 30 },
-                  transform: { type: "spring", stiffness: 300, damping: 30 },
-                  scale: { duration: 0.2 }
-                }}
-              >
-                {['5м', '15м', '30м', '1ч', '1.5ч'][leavingIn]}
-              </motion.div>
-
-              <div className="relative h-10 flex items-center mb-4">
-                {/* Track ticks */}
-                <div className="absolute w-full flex justify-between px-0.5 z-0 pointer-events-none">
-                  {[0, 1, 2, 3, 4].map((tick) => (
-                    <div key={tick} className="flex flex-col items-center">
-                      <div className={`w-1 h-1 rounded-full ${
-                        leavingIn >= tick 
-                          ? (isDark ? 'bg-blue-400' : 'bg-white') 
-                          : (isDark ? 'bg-gray-600' : 'bg-white/30')
-                      }`} />
-                    </div>
+            {timeInputMode === 'interval' ? (
+              <div key="interval-content" className="h-[150px] flex flex-col">
+                <div className="mb-5">
+                  <p className={`${isDark ? 'text-gray-400' : 'text-white/50'} text-[11px]`}>Предупредите соседа, когда уедете</p>
+                </div>
+                
+                <div className="flex flex-wrap gap-2.5 mb-4 items-center justify-center">
+                  {['5 мин', '15 мин', '30 мин', '1 час', '1.5 часа'].map((preset, index) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => {
+                        haptic.impact('light');
+                        setLeavingIn(index);
+                      }}
+                      className={`px-3 py-2 rounded-xl text-[12px] font-medium transition-all active:scale-95 ${
+                        leavingIn === index 
+                          ? (isDark ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-black shadow-sm')
+                          : (isDark ? 'bg-white/10 text-white/70 hover:bg-white/20' : 'bg-black/10 text-white/80 hover:bg-black/20')
+                      }`}
+                    >
+                      {preset}
+                    </button>
                   ))}
                 </div>
 
-                <div className={`absolute w-full h-[2px] rounded-full pointer-events-none ${
-                  isDark ? 'bg-gray-700' : 'bg-white/20'
-                }`}></div>
-                <div className={`absolute h-[2px] rounded-full pointer-events-none ${
-                  isDark ? 'bg-blue-500' : 'bg-white'
-                }`} style={{ width: `${(leavingIn / 4) * 100}%` }}></div>
-                
-                <motion.div 
-                  className="absolute w-5 h-5 bg-white rounded-full shadow-lg pointer-events-none flex items-center justify-center z-10"
-                  style={{ left: `calc(${(leavingIn / 4) * 100}% - 10px)` }}
-                  animate={{ left: `calc(${(leavingIn / 4) * 100}% - 10px)` }}
-                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                />
-
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="4" 
-                  step="1"
-                  value={leavingIn}
-                  onPointerDown={() => haptic.impact('light')}
-                  onChange={(e) => { 
-                    const val = parseInt(e.target.value);
-                    if (val !== leavingIn) {
-                      haptic.impact('medium');
-                      setLeavingIn(val); 
-                    }
-                  }}
-                  className="absolute inset-x-0 -top-4 w-full h-16 opacity-0 cursor-pointer z-50"
-                />
+                <p className={`mt-auto text-[9px] text-center ${isDark ? 'text-gray-500' : 'text-white/40'}`}>
+                  Выберите подходящий интервал
+                </p>
               </div>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="exact"
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="mb-5">
-              <p className={`${isDark ? 'text-gray-400' : 'text-white/70'} text-[11px] mb-0.5`}>Укажите время</p>
-              <p className={`${isDark ? 'text-gray-400' : 'text-white/50'} text-[11px]`}>Выберите точный момент выезда</p>
-            </div>
-
-            <div className={`flex items-center justify-between p-4 rounded-2xl border mb-2 ${
-              isDark ? 'bg-[#1A1A1A] border-gray-800' : 'bg-white/10 border-white/10'
-            }`}>
-              <span className={`text-[11px] font-medium ${isDark ? 'text-gray-300' : 'text-white/70'}`}>Время выезда</span>
-              <div className="relative">
-                <input 
-                  type="datetime-local" 
-                  value={exactTime}
-                  onChange={(e) => { haptic.selection(); setExactTime(e.target.value); }}
-                  className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                />
-                <div className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 ${
-                  isDark ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-white text-black'
-                }`}>
-                  {new Date(exactTime).toLocaleString('ru-RU', { 
-                    month: 'short', 
-                    day: 'numeric', 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
+            ) : (
+              <div key="exact-content" className="h-[150px] flex flex-col">
+                <div className="mb-5">
+                  <p className={`${isDark ? 'text-gray-400' : 'text-white/50'} text-[11px]`}>Выберите точный момент выезда</p>
                 </div>
+
+                <div className={`flex items-center justify-between p-4 rounded-2xl border mb-2 ${
+                  isDark ? 'bg-[#1A1A1A] border-gray-800' : 'bg-white/10 border-white/10'
+                }`}>
+                  <span className={`text-[11px] font-medium ${isDark ? 'text-gray-300' : 'text-white/70'}`}>Время выезда</span>
+                  <div className="relative">
+                    <input 
+                      type="datetime-local" 
+                      value={exactTime}
+                      onChange={(e) => { haptic.selection(); setExactTime(e.target.value); }}
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                    />
+                    <div className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 ${
+                      isDark ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-white text-black'
+                    }`}>
+                      {new Date(exactTime).toLocaleString('ru-RU', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </div>
+                  </div>
+                </div>
+                <p className={`mt-auto text-[9px] text-center ${isDark ? 'text-gray-500' : 'text-white/40'}`}>Нажмите на время, чтобы изменить</p>
               </div>
-            </div>
-            <p className={`text-[9px] text-center ${isDark ? 'text-gray-500' : 'text-white/40'}`}>Нажмите на время, чтобы изменить</p>
+            )}
           </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>
+      </motion.div>
     </div>
   );
 };
-
 
 const BackgroundAnimation = ({ isDark }: { isDark: boolean }) => {
   return (
@@ -370,13 +342,13 @@ const ProfileMenu = ({ cars, onAddCar, onDeleteCar, isDark, isShake, isShine, er
         transition={isShake ? { duration: 0.4 } : {}}
       >
         <motion.div 
-          className={`w-5 h-[2px] rounded-full transition-all duration-300 ${isOpen ? 'bg-[#FF6E40] translate-y-[3px] rotate-45' : (isDark ? 'bg-white' : 'bg-black')}`}
-          animate={isShine ? { background: ['#ffffff', '#ff6e40', '#ffffff'] } : {}}
+          className={`w-5 h-[2px] rounded-full transition-all duration-300 ${isOpen ? 'bg-[#E8683A] translate-y-[3px] rotate-45' : (isDark ? 'bg-white' : 'bg-black')}`}
+          animate={isShine ? { background: ['#ffffff', '#e8683a', '#ffffff'] } : {}}
           transition={isShine ? { duration: 1, repeat: Infinity } : {}}
         />
         <motion.div 
-          className={`w-5 h-[2px] rounded-full transition-all duration-300 ${isOpen ? 'bg-[#FF6E40] -translate-y-[3px] -rotate-45' : (isDark ? 'bg-white' : 'bg-black')}`}
-          animate={isShine ? { background: ['#ffffff', '#ff6e40', '#ffffff'] } : {}}
+          className={`w-5 h-[2px] rounded-full transition-all duration-300 ${isOpen ? 'bg-[#E8683A] -translate-y-[3px] -rotate-45' : (isDark ? 'bg-white' : 'bg-black')}`}
+          animate={isShine ? { background: ['#ffffff', '#e8683a', '#ffffff'] } : {}}
           transition={isShine ? { duration: 1, repeat: Infinity } : {}}
         />
       </motion.button>
@@ -467,6 +439,15 @@ export default function App() {
   const [isShine, setIsShine] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (photoPreviewUrl) {
+        URL.revokeObjectURL(photoPreviewUrl);
+      }
+    };
+  }, [photoPreviewUrl]);
 
   useEffect(() => {
     if (tg) {
@@ -554,6 +535,7 @@ export default function App() {
       }
     }
   };
+
   const [blockedCarNumbers, setBlockedCarNumbers] = useState<string[]>(['']);
   const [showTime, setShowTime] = useState(false);
   const [timeInputMode, setTimeInputMode] = useState<'interval' | 'exact'>('interval');
@@ -566,6 +548,31 @@ export default function App() {
   const [isDelivered, setIsDelivered] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper for setting selected photo and managing blob URL lifecycle safely
+  const handlePhotoSelect = (file: File | null) => {
+    if (photoPreviewUrl) {
+      URL.revokeObjectURL(photoPreviewUrl);
+    }
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setSelectedPhoto(file);
+      setPhotoPreviewUrl(url);
+    } else {
+      setSelectedPhoto(null);
+      setPhotoPreviewUrl(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const clearPhotoState = () => {
+    if (photoPreviewUrl) {
+      URL.revokeObjectURL(photoPreviewUrl);
+      setPhotoPreviewUrl(null);
+    }
+    setSelectedPhoto(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   useEffect(() => {
     if (!tg) return;
 
@@ -576,6 +583,7 @@ export default function App() {
       setSelectedReportReasons([]);
       setDescription('');
       setBlockedCarNumbers(['']);
+      clearPhotoState();
 
       switch (currentScreen) {
         case 'selection':
@@ -606,7 +614,7 @@ export default function App() {
     return () => {
       tg.BackButton.offClick(handleBack);
     };
-  }, [currentScreen]);
+  }, [currentScreen, photoPreviewUrl]);
 
   const handleNotify = async (type: string) => {
     haptic.impact('medium');
@@ -672,13 +680,6 @@ export default function App() {
     // Send request to backend
     const user = tg?.initDataUnsafe?.user;
     
-    console.log('--- handleNotify DEBUG ---');
-    console.log('user:', user);
-    console.log('finalType:', finalType);
-    console.log('blockedCarNumbers:', blockedCarNumbers);
-    console.log('target_car_number:', (finalType === 'blocked' || finalType === 'cant_leave' || finalType === 'warn') ? blockedCarNumbers[0] : null);
-    console.log('API_BASE:', API_BASE);
-    
     try {
       const formData = new FormData();
       if (user?.id) formData.append('telegram_id', String(user.id));
@@ -709,7 +710,7 @@ export default function App() {
         setSelectedReportReasons([]);
         setDescription('');
         setBlockedCarNumbers(['']);
-        setSelectedPhoto(null);
+        clearPhotoState();
       } else {
         console.error('Notify error:', data.error);
         setIsShake(true);
@@ -776,6 +777,38 @@ export default function App() {
     exit: { opacity: 0, y: -10 },
   };
 
+  const renderPhotoAttachmentUI = () => (
+    <div className="flex items-center gap-3 mb-5">
+      <button 
+        type="button"
+        onClick={handleAttachPhoto} 
+        className="flex items-center gap-1.5 text-white hover:text-white/80 transition-colors"
+      >
+        <div className="bg-white/20 backdrop-blur-xl p-1.5 rounded-lg">
+          <Plus size={12} className="text-white" />
+        </div>
+        <span className="font-medium text-[11px]">
+          {photoPreviewUrl ? "Заменить фото" : "Прикрепить фото"}
+        </span>
+      </button>
+      {photoPreviewUrl && (
+        <div className="relative w-8 h-8 rounded bg-white/10 shrink-0">
+          <img src={photoPreviewUrl} alt="Attached" className="w-full h-full object-cover rounded" />
+          <button 
+            type="button"
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              handlePhotoSelect(null);
+            }}
+            className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#E8683A] text-white rounded-full flex items-center justify-center shadow-md"
+          >
+            <X size={10} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   const renderScreen = () => {
     switch (currentScreen) {
       case 'welcome':
@@ -787,31 +820,33 @@ export default function App() {
             exit="exit"
             className="flex flex-col items-center justify-center min-h-[100dvh] bg-transparent text-white p-6 relative overflow-hidden z-10"
           >
-            <div className="flex-1 flex flex-col items-center justify-center max-w-[280px] mx-auto translate-y-4">
-              <h1 className="text-[32px] font-semibold text-center leading-[1.1] mb-1.5 tracking-tight">
-                Мешает автомобиль?
+            <div className="flex-1 flex flex-col items-center justify-center max-w-[320px] mx-auto translate-y-4">
+              <h1 className="text-[32px] font-semibold text-center leading-[1.1] mb-4 tracking-tight whitespace-nowrap">
+                Мешает автомобиль?<br />
+                Написал и поехал.
               </h1>
-              <p className="text-white text-center text-[13px] leading-relaxed font-light opacity-80">
-                Свяжись с владельцем<br />или сообщи о проблеме на парковке
+              <p className="text-white text-center text-[13px] leading-tight font-light opacity-100">
+                Свяжись с владельцем или сообщи о проблеме. Перекрыл соседа – предупреди
               </p>
             </div>
             
-            <div className="w-full max-w-[321px] flex flex-row gap-3 mb-40 relative z-20">
-              <button 
-                onClick={() => { haptic.impact('medium'); setCurrentScreen('selection'); }}
-                className="flex-1 h-[35px] bg-[#FF6E40] hover:bg-[#FF8A65] text-white rounded-full font-medium flex items-center justify-center gap-1.5 transition-transform active:scale-95 text-[11px]"
-              >
-                <MessageSquare size={14} />
-                Связаться
-              </button>
-              <button 
-                onClick={() => { haptic.impact('medium'); setCurrentScreen('report'); }}
-                className="flex-1 h-[35px] bg-transparent border-[1.5px] border-white hover:border-white text-white rounded-full font-medium flex items-center justify-center gap-1.5 transition-transform active:scale-95 text-[11px]"
-                style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
-              >
-                <AlertCircle size={14} />
-                Сообщить
-              </button>
+            <div className="w-full max-w-[321px] flex flex-col gap-[10px] mb-[52px] relative z-20">
+              <div className="flex flex-row gap-[10px]">
+                <button 
+                  onClick={() => { haptic.impact('medium'); setCurrentScreen('selection'); }}
+                  className="flex-1 h-[35px] bg-[#E8683A] hover:bg-[#F07040] text-white rounded-full font-medium flex items-center justify-center gap-1.5 transition-transform active:scale-[0.97] text-[11px]"
+                >
+                  <MessageSquare size={14} />
+                  Связаться
+                </button>
+                <button 
+                  onClick={() => { haptic.impact('medium'); setCurrentScreen('report'); }}
+                  className="flex-1 h-[35px] bg-transparent border-[1.4px] border-white text-white hover:bg-white/10 rounded-full font-medium flex items-center justify-center gap-1.5 transition-transform active:scale-[0.97] text-[11px]"
+                >
+                  <AlertCircle size={14} />
+                  Сообщить
+                </button>
+              </div>
             </div>
           </motion.div>
         );
@@ -835,7 +870,7 @@ export default function App() {
               <div className="flex flex-row gap-3">
                 <button 
                   onClick={() => { haptic.impact('medium'); setCurrentScreen('cant-leave'); }}
-                  className="flex-1 h-[35px] bg-[#FF6E40] hover:bg-[#FF8A65] text-white rounded-full font-medium flex items-center justify-center gap-1.5 transition-transform active:scale-95 text-[11px]"
+                  className="flex-1 h-[35px] bg-[#E8683A] hover:bg-[#F07040] text-white rounded-full font-medium flex items-center justify-center gap-1.5 transition-transform active:scale-95 text-[11px]"
                 >
                   <Car2Fill size={14} />
                   Не могу выехать
@@ -894,6 +929,7 @@ export default function App() {
                       {index === 0 && (
                         <div className="flex items-center bg-[#1A1A1A] rounded-xl px-1 shrink-0 h-[36px]">
                           <button 
+                            type="button"
                             onClick={() => {
                               haptic.impact('light');
                               if (blockedCarNumbers.length > 1) {
@@ -907,6 +943,7 @@ export default function App() {
                           </button>
                           <div className="w-[1px] h-4 bg-gray-700 mx-0.5"></div>
                           <button 
+                            type="button"
                             onClick={() => {
                               haptic.impact('light');
                               setBlockedCarNumbers([...blockedCarNumbers, '']);
@@ -921,12 +958,7 @@ export default function App() {
                   ))}
                 </div>
 
-                <button onClick={handleAttachPhoto} className="flex items-center gap-2 text-white mb-6 hover:text-white/80 transition-colors">
-                  <div className="border border-white/30 p-1 rounded-lg">
-                    <Plus size={12} className="text-white" />
-                  </div>
-                  <span className="font-medium text-[11px]">Прикрепить фото</span>
-                </button>
+                {renderPhotoAttachmentUI()}
 
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-2">
@@ -934,6 +966,7 @@ export default function App() {
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                   </div>
                   <button 
+                    type="button"
                     onClick={() => { haptic.impact('light'); setShowTime(!showTime); }}
                     className={`w-10 h-6 rounded-full transition-colors relative ${showTime ? 'bg-green-500' : 'bg-gray-600'}`}
                   >
@@ -964,6 +997,7 @@ export default function App() {
                 </AnimatePresence>
 
                 <button 
+                  type="button"
                   onClick={() => handleNotify('blocked')}
                   className="w-full bg-white/15 backdrop-blur-xl border border-white/20 hover:bg-white/25 text-white h-[44px] rounded-full font-semibold text-[13px] transition-all active:scale-[0.98] shadow-sm"
                 >
@@ -991,7 +1025,7 @@ export default function App() {
             <motion.div 
               animate={isShake ? { x: [-5, 5, -5, 5, 0] } : {}}
               transition={isShake ? { duration: 0.4 } : {}}
-              className="w-full bg-[#FF5E2A] text-white rounded-[28px] p-6 shadow-xl shrink-0 mt-auto mb-3 mx-auto"
+              className="w-full bg-[#E8683A] text-white rounded-[28px] p-6 shadow-xl shrink-0 mt-auto mb-3 mx-auto"
             >
                 <div className="mb-4">
                   <h2 className="text-[16px] font-semibold mb-0.5">Не могу выехать</h2>
@@ -1012,14 +1046,10 @@ export default function App() {
                   />
                 </div>
 
-                <button onClick={handleAttachPhoto} className="flex items-center gap-1.5 text-white mb-5 hover:text-white/80 transition-colors">
-                  <div className="bg-white/20 backdrop-blur-xl p-1.5 rounded-lg">
-                    <Plus size={12} className="text-white" />
-                  </div>
-                  <span className="font-medium text-[11px]">Прикрепить фото</span>
-                </button>
+                {renderPhotoAttachmentUI()}
 
                 <button 
+                  type="button"
                   onClick={() => handleNotify('cant_leave')}
                   className="w-full bg-white/30 backdrop-blur-xl border border-white/30 hover:bg-white/40 text-black h-[44px] rounded-full font-semibold text-[13px] transition-all active:scale-[0.98] shadow-sm"
                 >
@@ -1076,6 +1106,7 @@ export default function App() {
                         return (
                           <button
                             key={reason}
+                            type="button"
                             onClick={() => { haptic.selection(); toggleReason(reason); }}
                             className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200 active:scale-95 flex items-center gap-1.5 ${
                               isSelected 
@@ -1091,14 +1122,10 @@ export default function App() {
                     </div>
                   </div>
 
-                  <button onClick={handleAttachPhoto} className="flex items-center gap-1.5 text-white mb-5 hover:text-white/80 transition-colors">
-                    <div className="bg-white/20 backdrop-blur-xl p-1.5 rounded-lg">
-                      <Plus size={12} className="text-white" />
-                    </div>
-                    <span className="font-medium text-[11px]">Прикрепить фото</span>
-                  </button>
+                  {renderPhotoAttachmentUI()}
 
                   <button 
+                    type="button"
                     onClick={() => handleNotify('warn')}
                     className="w-full bg-white/15 backdrop-blur-xl border border-white/20 hover:bg-white/25 text-white h-[44px] rounded-full font-semibold text-[13px] transition-all active:scale-[0.98] shadow-sm"
                   >
@@ -1135,6 +1162,7 @@ export default function App() {
                 : "Если ваш сосед зарегистрирован в системе, он получит уведомление"}
             </p>
             <button 
+              type="button"
               onClick={() => { haptic.impact('light'); setCurrentScreen('welcome'); }}
               className="bg-black text-white h-[32px] px-6 rounded-full font-medium text-[11px] w-full max-w-[260px] transition-transform active:scale-95"
             >
@@ -1183,6 +1211,7 @@ export default function App() {
                       return (
                         <button
                           key={reason}
+                          type="button"
                           onClick={() => { 
                             haptic.selection(); 
                             if (isHelpReason) {
@@ -1212,15 +1241,11 @@ export default function App() {
                 </div>
 
                 <div className="flex flex-col gap-4">
-                  <button onClick={handleAttachPhoto} className="flex items-center gap-1.5 text-white hover:text-white/80 transition-colors">
-                    <div className="bg-white/20 backdrop-blur-xl p-1.5 rounded-lg">
-                      <Plus size={12} className="text-white" />
-                    </div>
-                    <span className="font-medium text-[11px]">Прикрепить фото</span>
-                  </button>
+                  {renderPhotoAttachmentUI()}
 
                   <div className="border-t border-white/10 pt-4">
                     <button 
+                      type="button"
                       onClick={() => { haptic.impact('light'); setIsDetailsExpanded(!isDetailsExpanded); }}
                       className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4"
                     >
@@ -1266,6 +1291,7 @@ export default function App() {
                   </div>
 
                   <button 
+                    type="button"
                     onClick={() => {
                       handleNotify('report_screen');
                     }}
@@ -1284,7 +1310,7 @@ export default function App() {
   const showProfile = currentScreen !== 'success';
 
   return (
-    <div className={`tg-container relative ${isDarkScreen ? 'bg-[#0D0D0D]' : 'bg-[#F0F0F0]'} overflow-hidden transition-colors duration-500`}>
+    <div className={`tg-container relative ${isDarkScreen ? 'bg-[#000000]' : 'bg-[#F0F0F0]'} overflow-hidden transition-colors duration-500`}>
       <BackgroundAnimation isDark={isDarkScreen} />
       {showProfile && (
         <ProfileMenu 
@@ -1332,7 +1358,7 @@ export default function App() {
         ref={fileInputRef}
         onChange={(e) => {
           if (e.target.files && e.target.files.length > 0) {
-            setSelectedPhoto(e.target.files[0]);
+            handlePhotoSelect(e.target.files[0]);
             haptic.notification('success');
           }
         }}
